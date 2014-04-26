@@ -1,57 +1,172 @@
+var express = require('express');
+var app = express();
+
 var request = require('request');
 var exec = require('child_process').exec;
+
+
+app.get("/torrentClient", function(req, res) {
+
+    torrentClientRunning(function() {
+
+        res.send("true");
+
+    }, function() {
+
+        res.send("false");
+
+    });
+
+});
+
+app.put("/torrentClient", function(req, res) {
+
+    if ("on" in req.query) {
+
+        startTorrentClient();
+
+    } else {
+
+        closeTorrentClient();
+    }
+
+    res.send("OK");
+
+});
+
+
+app.get("/sleep", function(req, res) {
+
+    res.send("OK");
+
+//    exec("powercfg -h off");
+//    exec("rundll32.exe powrprof.dll,SetSuspendState Sleep");
+
+});
+
+function torrentUncapped(onCallback, offCallback) {
+
+    request('http://192.168.1.3/torrentUncapped', function (error, response, body) {
+
+        // Must explicitly be off, assume on otherwise
+        var off = (body == "off");
+
+        if (off)
+            offCallback();
+
+        else
+            onCallback();
+
+    });
+
+}
+
+function torrentClientRunning(runningCallback, notRunningCallback) {
+
+    exec(__dirname + '/pslist.exe', function (error, stdout, stderr) {
+
+        if (stdout.toLowerCase().indexOf("utorrent") != -1) {
+
+            if (runningCallback)
+                runningCallback();
+
+        } else {
+
+            if (notRunningCallback)
+                notRunningCallback();
+
+        }
+
+    });
+
+}
+
+var killTorrentClientIfStillAlive;
+
+function startTorrentClient() {
+
+    console.log("Starting torrent client");
+
+    killTorrentClientIfStillAlive = false;
+
+    exec("c:/Users/Graeme/AppData/Roaming/uTorrent/uTorrent.exe");
+
+}
+
+
+function closeTorrentClient() {
+
+    console.log("Closing torrent client");
+
+    exec(__dirname + "/closeTorrent.exe");
+
+    killTorrentClientIfStillAlive = true;
+
+    setTimeout(function () {
+
+        torrentClientRunning(function() {
+
+            if (killTorrentClientIfStillAlive) {
+
+                console.log("Still alive - grrr! Killing!");
+
+                exec(__dirname + '/pskill.exe utorrent');
+
+            }
+
+        });
+
+    }, 30 * 1000);
+
+}
 
 
 function run() {
 
     console.log(new Date());
 
-    function killTorrent() {
 
-        console.log("Killing torrent process");
-        exec(__dirname + '/pskill.exe utorrent');
+    torrentUncapped(function() {
 
-    }
+        console.log("Torrent uncapped on, checking");
 
-    request('http://192.168.1.3/getActiveAccount', function (error, response, body) {
+        request('http://192.168.1.3/getActiveAccount', function (error, response, body) {
 
-        var account = body;
+            var account = body;
 
-        console.log("Active account is [" + account + "]");
+            console.log("Active account is [" + account + "]");
 
-        if (account != "uncapped") {
+            if (account != "uncapped") {
 
-            exec(__dirname + '/pslist.exe', function (error, stdout, stderr) {
+                torrentClientRunning(function() {
 
-                if (stdout.toLowerCase().indexOf("utorrent") != -1) {
+                    console.log("Found torrent process, trying to close");
 
-                    console.log("Found torrent process, trying to close")
+                    closeTorrentClient();
 
-                    exec(__dirname + "/closeTorrent.exe");
+                });
 
-                    setTimeout(function() {
+            } else {
 
-                        killTorrent();
+                startTorrentClient();
+            }
 
-                    }, 10 * 1000)
+        })
 
-                } else
+    }, function() {
 
-                    killTorrent();
-
-            });
-
-        } else {
-
-            console.log("Starting torrent client");
-            exec("/cygdrive/c/Users/Graeme/AppData/Roaming/uTorrent/uTorrent.exe");
-
-        }
+        console.log("Torrent uncapped is off, doing nothing");
 
     })
+
 
     setTimeout(run, 5 * 60 * 1000);
 
 }
 
 run();
+
+var port = process.env.PORT || 8080;
+
+app.listen(port);
+console.log('Listening on port '+port);
