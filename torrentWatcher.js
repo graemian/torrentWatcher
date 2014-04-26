@@ -2,18 +2,41 @@ var express = require('express');
 var app = express();
 
 var request = require('request');
-var exec = require('child_process').exec;
+var cp = require('child_process');
 
+function exec(cmd, callback) {
+
+    var stdout="";
+    var stderr="";
+
+    var cmd = cp.spawn(process.env.comspec,['/c',cmd]);
+
+    cmd.stdout.on('data', function (data) {
+        stdout += data;
+    });
+
+    cmd.stderr.on('data', function (data) {
+        stderr += data;
+    });
+
+    cmd.on('close', function (code) {
+
+        if (callback)
+            callback(code, stdout, stderr);
+
+    });
+
+}
 
 app.get("/torrentClient", function(req, res) {
 
     torrentClientRunning(function() {
 
-        res.send("true");
+        res.send("on");
 
     }, function() {
 
-        res.send("false");
+        res.send("off");
 
     });
 
@@ -37,10 +60,12 @@ app.put("/torrentClient", function(req, res) {
 
 app.get("/sleep", function(req, res) {
 
+    console.log("Sleeping");
+
     res.send("OK");
 
-//    exec("powercfg -h off");
-//    exec("rundll32.exe powrprof.dll,SetSuspendState Sleep");
+    exec("c:/windows/system32/powercfg.exe -h off");
+    exec("c:/windows/system32/rundll32.exe powrprof.dll,SetSuspendState Sleep");
 
 });
 
@@ -89,7 +114,14 @@ function startTorrentClient() {
 
     killTorrentClientIfStillAlive = false;
 
-    exec("c:/Users/Graeme/AppData/Roaming/uTorrent/uTorrent.exe");
+    exec("c:/Users/Graeme/AppData/Roaming/uTorrent/uTorrent.exe", function (code, stdout, stderr) {
+
+        console.log(code);
+        console.log(stdout);
+        console.log(stderr);
+
+
+    });
 
 }
 
@@ -159,6 +191,7 @@ function run() {
 
     })
 
+    console.log("Sleeping for 5 minutes");
 
     setTimeout(run, 5 * 60 * 1000);
 
