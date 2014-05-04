@@ -167,7 +167,7 @@ function run() {
             if (error || response.statusCode != 200) {
 
                 console.error("Problem while determining active account, aborting");
-                console.error("Error [" + error + "], status code [" + response.status + "], body [" + body + "]");
+                console.error("Error [" + error + "], status code [" + response.statusCode + "], body [" + body + "]");
 
             } else {
 
