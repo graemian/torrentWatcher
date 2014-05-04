@@ -11,7 +11,7 @@ cd $HOME
 while [ 1 ]; do
 
     "/cygdrive/c/Program Files/nodejs/node.exe" torrentWatcher.js >> out.log 2>> err.log
-    echo Node died, waiting 10s before restarting
+    (date; echo Node died, waiting 10s before restarting) >> err.log
     sleep 10
 
 done
