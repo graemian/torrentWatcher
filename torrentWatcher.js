@@ -164,23 +164,43 @@ function run() {
 
         request('http://192.168.1.3/getActiveAccount', function (error, response, body) {
 
-            var account = body;
+            if (error || response.statusCode != 200) {
 
-            console.log("Active account is [" + account + "]");
-
-            if (account != "uncapped") {
-
-                torrentClientRunning(function() {
-
-                    console.log("Found torrent process, trying to close");
-
-                    closeTorrentClient();
-
-                });
+                console.error("Problem while determining active account, aborting");
+                console.error("Error [" + error + "], status code [" + response.status);
 
             } else {
 
-                startTorrentClient();
+                var account = body;
+
+                console.log("Active account is [" + account + "]");
+
+                if (account != "uncapped") {
+
+                    torrentClientRunning(function() {
+
+                        console.log("Found torrent process, trying to close");
+
+                        closeTorrentClient();
+
+                    });
+
+                } else {
+
+                    torrentClientRunning(function() {
+
+                        console.log("Found torrent process, all good");
+
+                    }, function() {
+
+                        console.log("Torrent process not found, starting");
+
+                        startTorrentClient();
+
+                    });
+
+                }
+
             }
 
         })
