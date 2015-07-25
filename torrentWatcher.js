@@ -162,7 +162,7 @@ function run() {
 
         console.log("Torrent uncapped on, checking");
 
-        request('http://192.168.1.3/getActiveAccount', function (error, response, body) {
+        request('http://192.168.1.3:81/activeAccount', function (error, response, body) {
 
             if (error || response.statusCode != 200) {
 
